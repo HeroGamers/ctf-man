@@ -13,7 +13,7 @@
       packages = forAllSystems (system:
         let pkgs = nixpkgs.legacyPackages.${system};
         in {
-          default = pkgs.rustPlatform.buildRustPackage {
+          ctf-man = pkgs.rustPlatform.buildRustPackage {
             pname = "ctf-man";
             version = "0.1.0";
             src = ./.;
