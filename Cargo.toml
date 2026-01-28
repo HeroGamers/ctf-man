@@ -1,0 +1,40 @@
+[package]
+name = "ctf-man"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# TUI Framework
+ratatui = "0.29"
+crossterm = "0.28"
+
+# CLI Argument Parsing
+clap = { version = "4.5", features = ["derive"] }
+
+# Serialization/Deserialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+toml = "0.8"
+
+# Database
+rusqlite = { version = "0.32", features = ["bundled"] }
+
+# HTTP Client
+reqwest = { version = "0.12", features = ["blocking", "json", "rustls-tls"], default-features = false }
+
+# Error Handling
+anyhow = "1.0"
+
+# Utilities
+dirs = "5.0"
+chrono = "0.4"
+fs_extra = "1.3"
+
+[dev-dependencies]
+tempfile = "3.0"
+
+[profile.release]
+lto = true
+codegen-units = 1
+opt-level = 3
+strip = true

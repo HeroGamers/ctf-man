@@ -1,0 +1,26 @@
+# Rust
+/target/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Application data (when running locally)
+*.db
+*.db-shm
+*.db-wal
+
+# Nix
+result
+result-*
+.direnv/
+
+# Disgusting vibecoded
+.claude/
