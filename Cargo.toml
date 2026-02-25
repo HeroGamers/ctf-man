@@ -3,14 +3,26 @@ name = "ctf-man"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+# TUI support is on by default (needed for the ctf-man binary).
+# Downstream libraries that only need the database / config layer can opt out:
+#   ctf-man = { ..., default-features = false }
+default = ["tui"]
+tui = ["dep:ratatui", "dep:crossterm"]
+
 [lib]
 name = "ctf_man"
 path = "src/lib.rs"
 
+[[bin]]
+name = "ctf-man"
+path = "src/main.rs"
+required-features = ["tui"]
+
 [dependencies]
-# TUI Framework
-ratatui = "0.29"
-crossterm = "0.28"
+# TUI Framework (optional – enabled by the "tui" feature)
+ratatui   = { version = "0.29", optional = true }
+crossterm = { version = "0.28", optional = true }
 
 # CLI Argument Parsing
 clap = { version = "4.5", features = ["derive"] }

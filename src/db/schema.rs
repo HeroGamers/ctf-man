@@ -2,6 +2,31 @@ use anyhow::{Context, Result};
 use rusqlite::Connection;
 use std::path::Path;
 
+/// The current schema version.
+///
+/// Bump this integer every time the database schema changes.  External tools
+/// (e.g. ctf-dl) should read this value via [`get_schema_version`] after
+/// opening the database and refuse (or warn) if their expected version does
+/// not match.
+pub const SCHEMA_VERSION: i32 = 1;
+
+/// Read the schema version stored in the database (`PRAGMA user_version`).
+///
+/// Returns `0` if the database has never been stamped (i.e. was created before
+/// schema versioning was introduced).
+pub fn get_schema_version(conn: &Connection) -> Result<i32> {
+    conn.query_row("PRAGMA user_version", [], |row| row.get(0))
+        .context("Failed to read schema version")
+}
+
+/// Stamp the database with the given schema version (`PRAGMA user_version`).
+pub fn set_schema_version(conn: &Connection, version: i32) -> Result<()> {
+    // PRAGMA user_version does not accept bound parameters, so we format it
+    // directly.  The value is always an i32 so there is no injection risk.
+    conn.execute_batch(&format!("PRAGMA user_version = {version};"))
+        .context("Failed to set schema version")
+}
+
 /// SQL schema for the CTF database
 pub const SCHEMA: &str = r#"
 -- CTFs table: stores information about CTF competitions
@@ -80,6 +105,11 @@ pub fn init_database(db_path: &Path) -> Result<Connection> {
     // Execute the schema
     conn.execute_batch(SCHEMA)
         .context("Failed to initialize database schema")?;
+
+    // Stamp (or refresh) the schema version so external tools can detect
+    // whether their copy of the schema is still compatible.
+    set_schema_version(&conn, SCHEMA_VERSION)
+        .context("Failed to stamp schema version")?;
 
     // If this is the first run, import CTFs from CTFtime
     if is_first_run {

@@ -45,3 +45,20 @@ pub struct Challenge {
     pub created_at: String,
 }
 
+/// Lightweight input type used when importing challenges from an external
+/// source (e.g. ctf-dl).
+///
+/// Unlike [`Challenge`], this struct does not require the caller to know the
+/// `ctf_id` or `created_at` timestamp – those are filled in automatically by
+/// [`Database::import_ctf`].
+#[derive(Debug, Clone)]
+pub struct ChallengeImport {
+    /// Challenge name.
+    pub name: String,
+    /// Category (e.g. "Web", "Pwn", "Crypto").
+    pub category: Option<String>,
+    /// Point value at time of import.
+    pub points: Option<i32>,
+    /// Whether the authenticated team had already solved this challenge.
+    pub solved: bool,
+}

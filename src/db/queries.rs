@@ -1,6 +1,6 @@
-use super::models::{Challenge, Ctf};
+use super::models::{Challenge, ChallengeImport, Ctf};
 use anyhow::Result;
-use rusqlite::{params, Connection};
+use rusqlite::{params, Connection, OptionalExtension};
 
 /// Database wrapper providing high-level query methods
 pub struct Database {
@@ -10,6 +10,29 @@ pub struct Database {
 impl Database {
     pub fn new(conn: Connection) -> Self {
         Self { conn }
+    }
+
+    /// Open (or create) the ctf-man database at the canonical path and
+    /// initialise the schema.
+    ///
+    /// This is the most convenient way for external tools to obtain a
+    /// `Database` handle without having to locate the file themselves:
+    ///
+    /// ```rust,no_run
+    /// let db = ctf_man::db::Database::open()?;
+    /// ```
+    pub fn open() -> Result<Self> {
+        let db_path = crate::config::get_database_path()?;
+        let conn = crate::db::schema::init_database(&db_path)?;
+        Ok(Self::new(conn))
+    }
+
+    /// Return the schema version stamped in this database (`PRAGMA user_version`).
+    ///
+    /// External tools can compare this against [`crate::db::SCHEMA_VERSION`]
+    /// to detect forward-incompatible schema changes.
+    pub fn schema_version(&self) -> Result<i32> {
+        crate::db::schema::get_schema_version(&self.conn)
     }
 
     // ==================== CTF Queries ====================
@@ -96,7 +119,6 @@ impl Database {
     }
 
     /// Insert a new CTF into the database
-    #[cfg_attr(not(test), allow(dead_code))]
     pub fn insert_ctf(&self, ctf: &Ctf) -> Result<i64> {
         self.conn.execute(
             "INSERT INTO ctfs (name, url, start_date, end_date, team_name, notes)
@@ -115,7 +137,6 @@ impl Database {
     }
 
     /// Get a CTF by its ID
-    #[cfg_attr(not(test), allow(dead_code))]
     pub fn get_ctf_by_id(&self, id: i64) -> Result<Ctf> {
         self.conn.query_row(
             "SELECT id, name, url, start_date, end_date, team_name, notes, created_at
@@ -255,6 +276,86 @@ impl Database {
     /// Fetch CTFtime events and update cache metadata
     pub fn fetch_ctftime_with_cache(&self) -> Result<usize> {
         crate::db::ctftime::fetch_and_cache_ctftime_events(self, &self.conn)
+    }
+
+    // ==================== Import API ====================
+
+    /// Find-or-create a CTF by URL, then insert any challenges not yet present
+    /// for that CTF.
+    ///
+    /// This is the primary entry point for external importers such as ctf-dl.
+    /// The operation is fully idempotent:
+    ///
+    /// * The CTF row is looked up by `url`; if none is found a new row is
+    ///   inserted using `name` as the display name.
+    /// * Each challenge is keyed on `(ctf_id, name)`.  Rows that already exist
+    ///   are skipped so that any notes or flags the user has added in ctf-man
+    ///   are never overwritten.
+    ///
+    /// Returns `(ctf_id, new_challenge_count)`.
+    pub fn import_ctf(
+        &self,
+        name: &str,
+        url: &str,
+        challenges: &[ChallengeImport],
+    ) -> Result<(i64, usize)> {
+        let ctf_id = self.find_or_create_ctf_by_url(name, url)?;
+
+        let now = chrono::Utc::now().to_rfc3339();
+        let mut inserted = 0usize;
+
+        for ch in challenges {
+            // Skip if a challenge with this name already exists for this CTF.
+            let exists: bool = self
+                .conn
+                .query_row(
+                    "SELECT 1 FROM challenges WHERE ctf_id = ?1 AND name = ?2 LIMIT 1",
+                    params![ctf_id, &ch.name],
+                    |_| Ok(true),
+                )
+                .optional()
+                .map_err(anyhow::Error::from)?
+                .unwrap_or(false);
+
+            if exists {
+                continue;
+            }
+
+            self.conn.execute(
+                "INSERT INTO challenges (ctf_id, name, category, points, solved, created_at)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+                params![ctf_id, &ch.name, &ch.category, ch.points, ch.solved, now],
+            )?;
+
+            inserted += 1;
+        }
+
+        Ok((ctf_id, inserted))
+    }
+
+    /// Look up a CTF by its URL; insert a new row if not found.
+    fn find_or_create_ctf_by_url(&self, name: &str, url: &str) -> Result<i64> {
+        let existing: Option<i64> = self
+            .conn
+            .query_row(
+                "SELECT id FROM ctfs WHERE url = ? LIMIT 1",
+                params![url],
+                |row| row.get(0),
+            )
+            .optional()
+            .map_err(anyhow::Error::from)?;
+
+        if let Some(id) = existing {
+            return Ok(id);
+        }
+
+        let now = chrono::Utc::now().to_rfc3339();
+        self.conn.execute(
+            "INSERT INTO ctfs (name, url, created_at) VALUES (?1, ?2, ?3)",
+            params![name, url, now],
+        )?;
+
+        Ok(self.conn.last_insert_rowid())
     }
 
 }
