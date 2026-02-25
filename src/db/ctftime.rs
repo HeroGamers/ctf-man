@@ -115,8 +115,9 @@ pub fn fetch_ctftime_events(conn: &Connection) -> Result<usize> {
         notes.push_str("\n");
 
         // Add description (truncate to 500 chars)
-        let short_desc = if event.description.len() > 500 {
-            format!("{}...", &event.description[..500])
+        let short_desc = if event.description.chars().count() > 500 {
+            let truncated: String = event.description.chars().take(500).collect();
+            format!("{}...", truncated)
         } else {
             event.description.clone()
         };
