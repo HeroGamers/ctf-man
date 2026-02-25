@@ -5,13 +5,8 @@ use std::sync::mpsc;
 use std::thread;
 use std::time::Duration;
 
-mod app;
-mod cli;
-mod config;
-mod db;
-mod fs;
-mod templates;
-mod ui;
+// Import modules from the library
+use ctf_man::{app, config, db, fs, templates, ui};
 
 use app::{Action, App, OnboardingState, ViewMode};
 use config::{expand_tilde, get_database_path, setup_initial_directory, Config};
