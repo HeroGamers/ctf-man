@@ -56,8 +56,8 @@ fn scan_challenge_directories(ctf_path: &Path) -> Result<HashSet<(String, String
                         if challenge_path.is_dir() {
                             if let Some(challenge_name) = challenge_path.file_name().and_then(|n| n.to_str()) {
                                 challenges.insert((
-                                    category_name.to_string(),
-                                    challenge_name.to_string()
+                                    sanitize_challenge_name(category_name),
+                                    sanitize_challenge_name(challenge_name),
                                 ));
                             }
                         }
@@ -82,7 +82,9 @@ fn find_orphaned_challenges(
     let mut orphaned = Vec::new();
 
     for challenge in all_challenges {
-        let category = challenge.category.as_deref().unwrap_or("uncategorized");
+        let category = sanitize_challenge_name(
+            challenge.category.as_deref().unwrap_or("uncategorized"),
+        );
         let challenge_name = sanitize_challenge_name(&challenge.name);
 
         let expected_key = (category.to_string(), challenge_name);

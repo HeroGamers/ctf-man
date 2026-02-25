@@ -334,7 +334,17 @@ impl Database {
     }
 
     /// Look up a CTF by its URL; insert a new row if not found.
+    ///
+    /// Match order:
+    /// 1. Exact URL match — fast path, handles re-runs of ctf-dl.
+    /// 2. Hostname match — handles scheme/trailing-slash/path differences
+    ///    between the URL ctf-dl uses and the one CTFtime stored (e.g.
+    ///    `http://ctf.example.com/` vs `https://ctf.example.com`).
+    ///    When matched this way the stored URL is updated to `url` so
+    ///    subsequent runs hit the fast path.
+    /// 3. Insert a new row if neither match succeeds.
     fn find_or_create_ctf_by_url(&self, name: &str, url: &str) -> Result<i64> {
+        // 1. Exact match.
         let existing: Option<i64> = self
             .conn
             .query_row(
@@ -349,6 +359,39 @@ impl Database {
             return Ok(id);
         }
 
+        // 2. Hostname fallback: load all CTFs that have a URL and compare hosts.
+        let target_host = reqwest::Url::parse(url)
+            .ok()
+            .and_then(|u| u.host_str().map(str::to_owned));
+
+        if let Some(target_host) = target_host {
+            let mut stmt = self.conn.prepare(
+                "SELECT id, url FROM ctfs WHERE url IS NOT NULL AND url != ''"
+            )?;
+
+            let rows: Vec<(i64, String)> = stmt
+                .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?
+                .filter_map(|r| r.ok())
+                .collect();
+
+            for (id, stored_url) in rows {
+                let stored_host = reqwest::Url::parse(&stored_url)
+                    .ok()
+                    .and_then(|u| u.host_str().map(str::to_owned));
+
+                if stored_host.as_deref() == Some(target_host.as_str()) {
+                    // Update the stored URL to the canonical platform URL so
+                    // future exact-match lookups work.
+                    self.conn.execute(
+                        "UPDATE ctfs SET url = ?1 WHERE id = ?2",
+                        params![url, id],
+                    )?;
+                    return Ok(id);
+                }
+            }
+        }
+
+        // 3. No match – insert a new row.
         let now = chrono::Utc::now().to_rfc3339();
         self.conn.execute(
             "INSERT INTO ctfs (name, url, created_at) VALUES (?1, ?2, ?3)",
