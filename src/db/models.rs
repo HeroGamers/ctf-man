@@ -16,19 +16,26 @@ pub struct Ctf {
 
 impl Ctf {
     pub fn get_directory(&self, config: &crate::config::Config) -> PathBuf {
-        let base = config.default_ctf_directory
+        let base = config
+            .default_ctf_directory
             .as_ref()
             .cloned()
             .unwrap_or_else(|| PathBuf::from("."));
 
-        let dir_name = self.name
-            .replace(" ", "_")
-            .replace("/", "-")
-            .replace("\\", "-")
-            .to_lowercase();
-
-        base.join(dir_name)
+        base.join(ctf_dir_name(&self.name))
     }
+}
+
+/// Compute the filesystem directory name for a CTF given its display name.
+///
+/// Applies the same transformation used by [`Ctf::get_directory`]; exposed as
+/// a free function so external callers (e.g. ctf-dl) can compute the expected
+/// path without constructing a full [`Ctf`] instance.
+pub fn ctf_dir_name(name: &str) -> String {
+    name.replace(' ', "_")
+        .replace('/', "-")
+        .replace('\\', "-")
+        .to_lowercase()
 }
 
 /// Represents a single challenge within a CTF
