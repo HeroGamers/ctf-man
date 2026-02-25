@@ -12,3 +12,6 @@ pub mod ui;
 
 // Application state and logic
 pub mod app;
+
+// High-level runner orchestration
+pub mod runner;
