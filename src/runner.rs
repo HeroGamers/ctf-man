@@ -11,10 +11,11 @@ use crate::db::{init_database, Database};
 use crate::fs::sync_filesystem_to_database;
 use crate::templates;
 use crate::ui::{
-    components::{render_challenge_list, render_ctf_list, render_onboarding_dialog, render_settings_dialog},
+    components::{
+        render_challenge_list, render_ctf_list, render_onboarding_dialog, render_settings_dialog,
+    },
     event::poll_event,
-    restore_terminal,
-    setup_terminal,
+    restore_terminal, setup_terminal,
 };
 
 /// Run the TUI to select active CTF
@@ -99,7 +100,8 @@ pub fn run_tui(config: &mut Config) -> Result<()> {
         })?;
 
         // Handle events
-        let in_edit_mode = app.show_settings && app.settings_state.editing || app.onboarding_state.is_some();
+        let in_edit_mode =
+            app.show_settings && app.settings_state.editing || app.onboarding_state.is_some();
         if let Some(action) = poll_event(tick_duration, in_edit_mode)? {
             // If onboarding is active, handle onboarding events
             if app.onboarding_state.is_some() {
@@ -155,7 +157,10 @@ pub fn run_tui(config: &mut Config) -> Result<()> {
                                                 // Success! Save to config
                                                 config.default_ctf_directory = Some(path);
                                                 if let Err(e) = config.save() {
-                                                    state.set_error(format!("Failed to save config: {}", e));
+                                                    state.set_error(format!(
+                                                        "Failed to save config: {}",
+                                                        e
+                                                    ));
                                                 } else {
                                                     // Onboarding complete!
                                                     app.onboarding_state = None;
@@ -166,7 +171,9 @@ pub fn run_tui(config: &mut Config) -> Result<()> {
                                                     }
 
                                                     // If database is empty, fetch from CTFtime
-                                                    if app.ctfs.is_empty() && app.archived_ctfs.is_empty() {
+                                                    if app.ctfs.is_empty()
+                                                        && app.archived_ctfs.is_empty()
+                                                    {
                                                         if db.fetch_ctftime_with_cache().is_ok() {
                                                             let _ = app.load_ctfs(&db);
                                                         }
@@ -174,7 +181,10 @@ pub fn run_tui(config: &mut Config) -> Result<()> {
                                                 }
                                             }
                                             Err(e) => {
-                                                state.set_error(format!("Failed to create directory: {}", e));
+                                                state.set_error(format!(
+                                                    "Failed to create directory: {}",
+                                                    e
+                                                ));
                                             }
                                         }
                                     }
@@ -237,7 +247,8 @@ pub fn run_tui(config: &mut Config) -> Result<()> {
                                 if value.is_empty() {
                                     config.default_ctf_directory = None;
                                 } else {
-                                    config.default_ctf_directory = Some(std::path::PathBuf::from(value));
+                                    config.default_ctf_directory =
+                                        Some(std::path::PathBuf::from(value));
                                 }
                             }
                             SettingField::UiTickRate => {
@@ -301,7 +312,8 @@ pub fn run_tui(config: &mut Config) -> Result<()> {
                                 thread::spawn(move || {
                                     // Create a new database connection in this thread
                                     let result = (|| -> Result<usize> {
-                                        let conn = crate::db::schema::init_database(&db_path_clone)?;
+                                        let conn =
+                                            crate::db::schema::init_database(&db_path_clone)?;
                                         let db_thread = Database::new(conn);
                                         db_thread.fetch_ctftime_with_cache()
                                     })();
@@ -337,11 +349,12 @@ pub fn run_tui(config: &mut Config) -> Result<()> {
                                     // instead of get_selected_ctf() which uses selected_index
                                     if let Some(ctf) = app.get_current_ctf() {
                                         let ctf_path = ctf.get_directory(config);
-                                        let category = challenge.category.as_ref()
+                                        let category = challenge
+                                            .category
+                                            .as_ref()
                                             .expect("Challenge must have a category");
-                                        let challenge_path = ctf_path
-                                            .join(category)
-                                            .join(&challenge.name);
+                                        let challenge_path =
+                                            ctf_path.join(category).join(&challenge.name);
 
                                         // Store path for navigation and exit
                                         app.navigation_path = Some(challenge_path);
@@ -349,6 +362,17 @@ pub fn run_tui(config: &mut Config) -> Result<()> {
                                     } else {
                                         // This shouldn't happen, but log an error if it does
                                         eprintln!("Error: No CTF found for current challenge view");
+                                    }
+                                }
+                            }
+                            Action::ToggleSolved => {
+                                if let Some(challenge) = app.get_selected_challenge() {
+                                    if let Some(id) = challenge.id {
+                                        if db.toggle_solved(id).is_ok() {
+                                            if let Some(ctf_id) = app.current_ctf_id {
+                                                let _ = app.load_challenges(&db, ctf_id);
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -442,10 +466,12 @@ pub fn perform_sync(db: &Database, config: &Config) -> Result<crate::fs::SyncRes
 /// Create a challenge folder in the active CTF
 pub fn create_challenge(config: &Config, category: &str, challenge_name: &str) -> Result<()> {
     // Get active CTF ID and path
-    let ctf_id = config.active_ctf_id
+    let ctf_id = config
+        .active_ctf_id
         .context("No active CTF. Run 'ctf' to select one")?;
 
-    let ctf_path = config.get_active_ctf_path()
+    let ctf_path = config
+        .get_active_ctf_path()
         .context("No active CTF. Run 'ctf' to select one")?;
 
     // Create: ctf-folder/category/challenge-name/

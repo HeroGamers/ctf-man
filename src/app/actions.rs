@@ -50,11 +50,13 @@ pub enum Action {
     /// Move cursor to end (for text input)
     End,
 
+    /// Toggle the solved status of the currently selected challenge
+    ToggleSolved,
+
     // TODO: Add more actions as you build features:
     // - SwitchScreen(Screen) - Navigate between different views
     // - OpenChallenge(usize) - Open a specific challenge
     // - CreateCTF(String) - Create a new CTF
     // - DeleteCTF(usize) - Delete a CTF
     // - FilterByCategory(String) - Filter challenges
-    // - ToggleSolved(usize) - Mark challenge as solved/unsolved
 }

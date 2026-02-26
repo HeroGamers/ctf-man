@@ -55,7 +55,9 @@ fn render_title(frame: &mut Frame, app: &App, area: Rect) {
 }
 
 /// Group challenges by category and maintain their original indices
-fn group_challenges_by_category(challenges: &[Challenge]) -> Vec<(String, Vec<(usize, &Challenge)>)> {
+fn group_challenges_by_category(
+    challenges: &[Challenge],
+) -> Vec<(String, Vec<(usize, &Challenge)>)> {
     let mut category_map: HashMap<String, Vec<(usize, &Challenge)>> = HashMap::new();
 
     for (index, challenge) in challenges.iter().enumerate() {
@@ -78,7 +80,10 @@ fn group_challenges_by_category(challenges: &[Challenge]) -> Vec<(String, Vec<(u
 }
 
 /// Calculate the visual index (including headers and spacing) from flat challenge index
-fn calculate_visual_index(grouped_challenges: &[(String, Vec<(usize, &Challenge)>)], flat_index: usize) -> Option<usize> {
+fn calculate_visual_index(
+    grouped_challenges: &[(String, Vec<(usize, &Challenge)>)],
+    flat_index: usize,
+) -> Option<usize> {
     let mut visual_index = 0;
 
     for (_, challenges) in grouped_challenges {
@@ -107,14 +112,12 @@ fn render_list(frame: &mut Frame, app: &App, area: Rect) {
 
     for (category, challenges) in &grouped_challenges {
         // Add category header
-        items.push(ListItem::new(Line::from(vec![
-            Span::styled(
-                format!("━━ {} ━━", category),
-                Style::default()
-                    .fg(Color::Magenta)
-                    .add_modifier(Modifier::BOLD),
-            ),
-        ])));
+        items.push(ListItem::new(Line::from(vec![Span::styled(
+            format!("━━ {} ━━", category),
+            Style::default()
+                .fg(Color::Magenta)
+                .add_modifier(Modifier::BOLD),
+        )])));
 
         // Add challenges in this category
         for (original_index, challenge) in challenges {
@@ -127,12 +130,7 @@ fn render_list(frame: &mut Frame, app: &App, area: Rect) {
                 .map(|p| format!(" ({}pts)", p))
                 .unwrap_or_default();
 
-            let line_text = format!(
-                "[{}] {}{}",
-                solved_indicator,
-                challenge.name,
-                points_text
-            );
+            let line_text = format!("[{}] {}{}", solved_indicator, challenge.name, points_text);
 
             // Create styled content
             let content = if is_selected {
@@ -154,10 +152,7 @@ fn render_list(frame: &mut Frame, app: &App, area: Rect) {
                     Style::default().fg(Color::White)
                 };
 
-                Line::from(vec![
-                    Span::raw("    "),
-                    Span::styled(line_text, style),
-                ])
+                Line::from(vec![Span::raw("    "), Span::styled(line_text, style)])
             };
 
             items.push(ListItem::new(content));
@@ -171,7 +166,9 @@ fn render_list(frame: &mut Frame, app: &App, area: Rect) {
     if app.challenges.is_empty() {
         items.push(ListItem::new(Line::from(Span::styled(
             "No challenges yet. Use 'ctf <category> <challenge>' to create one.",
-            Style::default().fg(Color::Gray).add_modifier(Modifier::ITALIC),
+            Style::default()
+                .fg(Color::Gray)
+                .add_modifier(Modifier::ITALIC),
         ))));
     }
 
@@ -187,13 +184,15 @@ fn render_list(frame: &mut Frame, app: &App, area: Rect) {
         .highlight_style(
             Style::default()
                 .fg(Color::Yellow)
-                .add_modifier(Modifier::BOLD)
+                .add_modifier(Modifier::BOLD),
         );
 
     // Calculate visual index for the selected challenge and create ListState
     let mut list_state = ListState::default();
     if !app.challenges.is_empty() {
-        if let Some(visual_idx) = calculate_visual_index(&grouped_challenges, app.challenge_selected_index) {
+        if let Some(visual_idx) =
+            calculate_visual_index(&grouped_challenges, app.challenge_selected_index)
+        {
             list_state.select(Some(visual_idx));
         }
     }
@@ -211,7 +210,9 @@ fn render_help(frame: &mut Frame, area: Rect) {
         Span::styled("down", Style::default().fg(Color::Gray)),
         Span::raw(" | "),
         Span::styled("Enter", Style::default().fg(Color::Green)),
-        Span::raw(" open challenge | "),
+        Span::raw(" open | "),
+        Span::styled("Space", Style::default().fg(Color::Cyan)),
+        Span::raw(" toggle solved | "),
         Span::styled("Esc", Style::default().fg(Color::Red)),
         Span::raw(" back to CTF list | "),
         Span::styled("q", Style::default().fg(Color::Red)),

@@ -19,7 +19,7 @@ impl Database {
     /// `Database` handle without having to locate the file themselves:
     ///
     /// ```rust,no_run
-    /// let db = ctf_man::db::Database::open()?;
+    /// let db = ctf_man::db::Database::open().unwrap();
     /// ```
     pub fn open() -> Result<Self> {
         let db_path = crate::config::get_database_path()?;
@@ -42,22 +42,23 @@ impl Database {
         let mut stmt = self.conn.prepare(
             "SELECT id, name, url, start_date, end_date, team_name, notes, created_at
              FROM ctfs
-             ORDER BY created_at DESC"
+             ORDER BY created_at DESC",
         )?;
 
-        let ctfs = stmt.query_map([], |row| {
-            Ok(Ctf {
-                id: row.get(0)?,
-                name: row.get(1)?,
-                url: row.get(2)?,
-                start_date: row.get(3)?,
-                end_date: row.get(4)?,
-                team_name: row.get(5)?,
-                notes: row.get(6)?,
-                created_at: row.get(7)?,
-            })
-        })?
-        .collect::<Result<Vec<_>, _>>()?;
+        let ctfs = stmt
+            .query_map([], |row| {
+                Ok(Ctf {
+                    id: row.get(0)?,
+                    name: row.get(1)?,
+                    url: row.get(2)?,
+                    start_date: row.get(3)?,
+                    end_date: row.get(4)?,
+                    team_name: row.get(5)?,
+                    notes: row.get(6)?,
+                    created_at: row.get(7)?,
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
 
         Ok(ctfs)
     }
@@ -70,22 +71,23 @@ impl Database {
             "SELECT id, name, url, start_date, end_date, team_name, notes, created_at
              FROM ctfs
              WHERE end_date IS NULL OR end_date >= ?
-             ORDER BY CASE WHEN start_date IS NOT NULL THEN start_date ELSE created_at END ASC"
+             ORDER BY CASE WHEN start_date IS NOT NULL THEN start_date ELSE created_at END ASC",
         )?;
 
-        let ctfs = stmt.query_map(params![today], |row| {
-            Ok(Ctf {
-                id: row.get(0)?,
-                name: row.get(1)?,
-                url: row.get(2)?,
-                start_date: row.get(3)?,
-                end_date: row.get(4)?,
-                team_name: row.get(5)?,
-                notes: row.get(6)?,
-                created_at: row.get(7)?,
-            })
-        })?
-        .collect::<Result<Vec<_>, _>>()?;
+        let ctfs = stmt
+            .query_map(params![today], |row| {
+                Ok(Ctf {
+                    id: row.get(0)?,
+                    name: row.get(1)?,
+                    url: row.get(2)?,
+                    start_date: row.get(3)?,
+                    end_date: row.get(4)?,
+                    team_name: row.get(5)?,
+                    notes: row.get(6)?,
+                    created_at: row.get(7)?,
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
 
         Ok(ctfs)
     }
@@ -98,22 +100,23 @@ impl Database {
             "SELECT id, name, url, start_date, end_date, team_name, notes, created_at
              FROM ctfs
              WHERE end_date IS NOT NULL AND end_date < ?
-             ORDER BY end_date DESC"
+             ORDER BY end_date DESC",
         )?;
 
-        let ctfs = stmt.query_map(params![today], |row| {
-            Ok(Ctf {
-                id: row.get(0)?,
-                name: row.get(1)?,
-                url: row.get(2)?,
-                start_date: row.get(3)?,
-                end_date: row.get(4)?,
-                team_name: row.get(5)?,
-                notes: row.get(6)?,
-                created_at: row.get(7)?,
-            })
-        })?
-        .collect::<Result<Vec<_>, _>>()?;
+        let ctfs = stmt
+            .query_map(params![today], |row| {
+                Ok(Ctf {
+                    id: row.get(0)?,
+                    name: row.get(1)?,
+                    url: row.get(2)?,
+                    start_date: row.get(3)?,
+                    end_date: row.get(4)?,
+                    team_name: row.get(5)?,
+                    notes: row.get(6)?,
+                    created_at: row.get(7)?,
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
 
         Ok(ctfs)
     }
@@ -138,24 +141,26 @@ impl Database {
 
     /// Get a CTF by its ID
     pub fn get_ctf_by_id(&self, id: i64) -> Result<Ctf> {
-        self.conn.query_row(
-            "SELECT id, name, url, start_date, end_date, team_name, notes, created_at
+        self.conn
+            .query_row(
+                "SELECT id, name, url, start_date, end_date, team_name, notes, created_at
              FROM ctfs
              WHERE id = ?",
-            params![id],
-            |row| {
-                Ok(Ctf {
-                    id: row.get(0)?,
-                    name: row.get(1)?,
-                    url: row.get(2)?,
-                    start_date: row.get(3)?,
-                    end_date: row.get(4)?,
-                    team_name: row.get(5)?,
-                    notes: row.get(6)?,
-                    created_at: row.get(7)?,
-                })
-            },
-        ).map_err(|e| e.into())
+                params![id],
+                |row| {
+                    Ok(Ctf {
+                        id: row.get(0)?,
+                        name: row.get(1)?,
+                        url: row.get(2)?,
+                        start_date: row.get(3)?,
+                        end_date: row.get(4)?,
+                        team_name: row.get(5)?,
+                        notes: row.get(6)?,
+                        created_at: row.get(7)?,
+                    })
+                },
+            )
+            .map_err(|e| e.into())
     }
 
     // TODO: Add more CTF operations:
@@ -169,23 +174,24 @@ impl Database {
             "SELECT id, ctf_id, name, category, points, flag, solved, notes, created_at
              FROM challenges
              WHERE ctf_id = ?
-             ORDER BY category, name"
+             ORDER BY category, name",
         )?;
 
-        let challenges = stmt.query_map(params![ctf_id], |row| {
-            Ok(Challenge {
-                id: row.get(0)?,
-                ctf_id: row.get(1)?,
-                name: row.get(2)?,
-                category: row.get(3)?,
-                points: row.get(4)?,
-                flag: row.get(5)?,
-                solved: row.get(6)?,
-                notes: row.get(7)?,
-                created_at: row.get(8)?,
-            })
-        })?
-        .collect::<Result<Vec<_>, _>>()?;
+        let challenges = stmt
+            .query_map(params![ctf_id], |row| {
+                Ok(Challenge {
+                    id: row.get(0)?,
+                    ctf_id: row.get(1)?,
+                    name: row.get(2)?,
+                    category: row.get(3)?,
+                    points: row.get(4)?,
+                    flag: row.get(5)?,
+                    solved: row.get(6)?,
+                    notes: row.get(7)?,
+                    created_at: row.get(8)?,
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
 
         Ok(challenges)
     }
@@ -211,16 +217,23 @@ impl Database {
 
     /// Delete a challenge by ID
     pub fn delete_challenge(&self, id: i64) -> Result<()> {
-        self.conn.execute(
-            "DELETE FROM challenges WHERE id = ?",
-            params![id],
-        )?;
+        self.conn
+            .execute("DELETE FROM challenges WHERE id = ?", params![id])?;
         Ok(())
     }
 
     // TODO: Add more challenge operations:
     // - update_challenge(&self, challenge: &Challenge) -> Result<()>
-    // - toggle_solved(&self, id: i64) -> Result<()>
+
+    /// Toggle the solved status of a challenge
+    pub fn toggle_solved(&self, id: i64) -> Result<()> {
+        self.conn.execute(
+            "UPDATE challenges SET solved = NOT solved WHERE id = ?",
+            params![id],
+        )?;
+        Ok(())
+    }
+
     // - search_challenges(&self, query: &str) -> Result<Vec<Challenge>>
 
     // ==================== API Cache Metadata Queries ====================
@@ -365,9 +378,9 @@ impl Database {
             .and_then(|u| u.host_str().map(str::to_owned));
 
         if let Some(target_host) = target_host {
-            let mut stmt = self.conn.prepare(
-                "SELECT id, url FROM ctfs WHERE url IS NOT NULL AND url != ''"
-            )?;
+            let mut stmt = self
+                .conn
+                .prepare("SELECT id, url FROM ctfs WHERE url IS NOT NULL AND url != ''")?;
 
             let rows: Vec<(i64, String)> = stmt
                 .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?
@@ -382,10 +395,8 @@ impl Database {
                 if stored_host.as_deref() == Some(target_host.as_str()) {
                     // Update the stored URL to the canonical platform URL so
                     // future exact-match lookups work.
-                    self.conn.execute(
-                        "UPDATE ctfs SET url = ?1 WHERE id = ?2",
-                        params![url, id],
-                    )?;
+                    self.conn
+                        .execute("UPDATE ctfs SET url = ?1 WHERE id = ?2", params![url, id])?;
                     return Ok(id);
                 }
             }
@@ -400,7 +411,6 @@ impl Database {
 
         Ok(self.conn.last_insert_rowid())
     }
-
 }
 
 #[cfg(test)]

@@ -39,6 +39,7 @@ pub fn handle_key_event(key: KeyEvent, in_edit_mode: bool) -> Option<Action> {
         KeyCode::Right | KeyCode::Char('l') => Some(Action::OpenChallengeView),
         KeyCode::Left | KeyCode::Char('h') => Some(Action::Back),
         KeyCode::Enter => Some(Action::Enter),
+        KeyCode::Char(' ') => Some(Action::ToggleSolved),
         KeyCode::Esc | KeyCode::Backspace => Some(Action::Back),
 
         // Refresh from API (force fetch from CTFtime)
@@ -57,7 +58,6 @@ pub fn handle_key_event(key: KeyEvent, in_edit_mode: bool) -> Option<Action> {
         // - Char('?') -> Action::ShowHelp
         // - Tab -> Action::NextTab
         // - BackTab -> Action::PreviousTab
-
         _ => None,
     }
 }
