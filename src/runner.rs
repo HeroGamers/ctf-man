@@ -353,8 +353,12 @@ pub fn run_tui(config: &mut Config) -> Result<()> {
                                             .category
                                             .as_ref()
                                             .expect("Challenge must have a category");
+                                        let safe_category =
+                                            crate::fs::sanitize_challenge_name(category);
+                                        let safe_name =
+                                            crate::fs::sanitize_challenge_name(&challenge.name);
                                         let challenge_path =
-                                            ctf_path.join(category).join(&challenge.name);
+                                            ctf_path.join(&safe_category).join(&safe_name);
 
                                         // Store path for navigation and exit
                                         app.navigation_path = Some(challenge_path);
@@ -475,7 +479,9 @@ pub fn create_challenge(config: &Config, category: &str, challenge_name: &str) -
         .context("No active CTF. Run 'ctf' to select one")?;
 
     // Create: ctf-folder/category/challenge-name/
-    let challenge_path = ctf_path.join(category).join(challenge_name);
+    let safe_category = crate::fs::sanitize_challenge_name(category);
+    let safe_name = crate::fs::sanitize_challenge_name(challenge_name);
+    let challenge_path = ctf_path.join(&safe_category).join(&safe_name);
 
     std_fs::create_dir_all(&challenge_path)
         .context(format!("Failed to create directory: {:?}", challenge_path))?;

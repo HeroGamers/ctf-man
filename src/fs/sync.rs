@@ -19,11 +19,35 @@ impl SyncResult {
 }
 
 /// Sanitize a challenge name for directory matching
-fn sanitize_challenge_name(name: &str) -> String {
-    name.replace(" ", "_")
-        .replace("/", "-")
-        .replace("\\", "-")
-        .to_lowercase()
+pub fn sanitize_challenge_name(name: &str) -> String {
+    let mut result = String::with_capacity(name.len());
+    let mut last_was_underscore = false;
+
+    for c in name.chars() {
+        if c == '/'
+            || c == '\\'
+            || c == ':'
+            || c == '*'
+            || c == '?'
+            || c == '"'
+            || c == '<'
+            || c == '>'
+            || c == '|'
+            || c == '\0'
+            || c == ' '
+            || !c.is_ascii()
+        {
+            if !last_was_underscore {
+                result.push('_');
+                last_was_underscore = true;
+            }
+        } else {
+            result.push(c);
+            last_was_underscore = false;
+        }
+    }
+
+    result.trim_matches('_').to_lowercase()
 }
 
 /// Scan challenge directories within a CTF directory
@@ -36,8 +60,8 @@ fn scan_challenge_directories(ctf_path: &Path) -> Result<HashSet<(String, String
     }
 
     // Read category directories
-    let category_entries = fs::read_dir(ctf_path)
-        .context(format!("Failed to read CTF directory: {:?}", ctf_path))?;
+    let category_entries =
+        fs::read_dir(ctf_path).context(format!("Failed to read CTF directory: {:?}", ctf_path))?;
 
     for category_entry in category_entries {
         let category_entry = category_entry.context("Failed to read category directory")?;
@@ -50,11 +74,14 @@ fn scan_challenge_directories(ctf_path: &Path) -> Result<HashSet<(String, String
 
                 if let Ok(challenge_entries) = challenge_entries {
                     for challenge_entry in challenge_entries {
-                        let challenge_entry = challenge_entry.context("Failed to read challenge directory")?;
+                        let challenge_entry =
+                            challenge_entry.context("Failed to read challenge directory")?;
                         let challenge_path = challenge_entry.path();
 
                         if challenge_path.is_dir() {
-                            if let Some(challenge_name) = challenge_path.file_name().and_then(|n| n.to_str()) {
+                            if let Some(challenge_name) =
+                                challenge_path.file_name().and_then(|n| n.to_str())
+                            {
                                 challenges.insert((
                                     sanitize_challenge_name(category_name),
                                     sanitize_challenge_name(challenge_name),
@@ -71,20 +98,15 @@ fn scan_challenge_directories(ctf_path: &Path) -> Result<HashSet<(String, String
 }
 
 /// Find challenges in the database that don't have corresponding directories
-fn find_orphaned_challenges(
-    db: &Database,
-    ctf: &Ctf,
-    ctf_path: &Path,
-) -> Result<Vec<Challenge>> {
+fn find_orphaned_challenges(db: &Database, ctf: &Ctf, ctf_path: &Path) -> Result<Vec<Challenge>> {
     let all_challenges = db.get_challenges_for_ctf(ctf.id.unwrap())?;
     let existing_challenges = scan_challenge_directories(ctf_path)?;
 
     let mut orphaned = Vec::new();
 
     for challenge in all_challenges {
-        let category = sanitize_challenge_name(
-            challenge.category.as_deref().unwrap_or("uncategorized"),
-        );
+        let category =
+            sanitize_challenge_name(challenge.category.as_deref().unwrap_or("uncategorized"));
         let challenge_name = sanitize_challenge_name(&challenge.name);
 
         let expected_key = (category.to_string(), challenge_name);
@@ -130,14 +152,15 @@ pub fn sync_filesystem_to_database(
 
                 // Delete the orphaned challenge from the database
                 db.delete_challenge(challenge.id.unwrap())?;
-                result.challenges_removed.push((ctf.name.clone(), challenge_name));
+                result
+                    .challenges_removed
+                    .push((ctf.name.clone(), challenge_name));
             }
         }
     }
 
     Ok(result)
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -146,6 +169,14 @@ mod tests {
     #[test]
     fn test_sanitize_challenge_name() {
         assert_eq!(sanitize_challenge_name("Easy Pwn"), "easy_pwn");
-        assert_eq!(sanitize_challenge_name("Web/XSS"), "web-xss");
+        assert_eq!(sanitize_challenge_name("Web/XSS"), "web_xss");
+        assert_eq!(
+            sanitize_challenge_name("⭐ Step 1: Read the rules"),
+            "step_1_read_the_rules"
+        );
+        assert_eq!(
+            sanitize_challenge_name("Super<Crazy>|Name?"),
+            "super_crazy_name"
+        );
     }
 }
