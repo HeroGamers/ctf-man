@@ -1,6 +1,6 @@
 use crate::config::Config;
-use crate::db::models::{Challenge, Ctf};
 use crate::db::Database;
+use crate::db::models::{Challenge, Ctf};
 use anyhow::{Context, Result};
 use std::collections::HashSet;
 use std::fs;
@@ -125,7 +125,7 @@ fn find_orphaned_challenges(db: &Database, ctf: &Ctf, ctf_path: &Path) -> Result
 pub fn sync_filesystem_to_database(
     db: &Database,
     config: &Config,
-    _confirm: bool,
+    confirm: bool,
 ) -> Result<SyncResult> {
     let mut result = SyncResult::default();
 
@@ -150,8 +150,11 @@ pub fn sync_filesystem_to_database(
             for challenge in orphaned_challenges {
                 let challenge_name = challenge.name.clone();
 
-                // Delete the orphaned challenge from the database
-                db.delete_challenge(challenge.id.unwrap())?;
+                if confirm {
+                    // Delete the orphaned challenge from the database
+                    db.delete_challenge(challenge.id.unwrap())?;
+                }
+
                 result
                     .challenges_removed
                     .push((ctf.name.clone(), challenge_name));

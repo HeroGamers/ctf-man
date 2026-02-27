@@ -6,8 +6,8 @@ use std::thread;
 use std::time::Duration;
 
 use crate::app::{Action, App, OnboardingState, ViewMode};
-use crate::config::{expand_tilde, get_database_path, setup_initial_directory, Config};
-use crate::db::{init_database, Database};
+use crate::config::{Config, expand_tilde, get_database_path, setup_initial_directory};
+use crate::db::{Database, init_database};
 use crate::fs::sync_filesystem_to_database;
 use crate::templates;
 use crate::ui::{
@@ -428,7 +428,7 @@ pub fn run_tui(config: &mut Config) -> Result<()> {
 pub fn perform_sync(db: &Database, config: &Config) -> Result<crate::fs::SyncResult> {
     // If confirmation is disabled, just do the sync
     if !config.sync.confirm_before_sync_delete {
-        return sync_filesystem_to_database(db, config, false);
+        return sync_filesystem_to_database(db, config, true);
     }
 
     // First, do a dry run to see what would be deleted
@@ -459,7 +459,7 @@ pub fn perform_sync(db: &Database, config: &Config) -> Result<crate::fs::SyncRes
 
     if input == "y" || input == "yes" {
         // User confirmed, perform the actual sync
-        sync_filesystem_to_database(db, config, false)
+        sync_filesystem_to_database(db, config, true)
     } else {
         println!("Sync cancelled.");
         // Return empty result
