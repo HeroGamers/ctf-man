@@ -36,7 +36,7 @@ toml = "0.8"
 rusqlite = { version = "0.32", features = ["bundled"] }
 
 # HTTP Client
-reqwest = { version = "0.12", features = ["blocking", "json", "rustls-tls"], default-features = false }
+reqwest = { version = "0.13", features = ["blocking", "json", "rustls"], default-features = false }
 
 # Error Handling
 anyhow = "1.0"
